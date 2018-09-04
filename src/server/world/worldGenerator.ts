@@ -1,5 +1,5 @@
 /** Modules */
-import * as worldSystem from '../worldSystem';
+import * as WorldModule from '../modules/worldModule';
 
 /** Data */
 import Point2D from '../../common/data/point2d';
@@ -21,7 +21,7 @@ export function generateLand (world: World) {
     const octaves = 5;
     const chunks = 16;
     const amplitude = worldRadius / 2;
-    let landNoise = worldSystem.getNoise('land');
+    let landNoise = WorldModule.getNoise('land');
     for (let x = 0; x < world.width; x++) {
         for (let y = 0; y < world.height; y++) {
             // calculate the angle from 12'oclock
@@ -63,8 +63,8 @@ export function generateElevation (world: World) {
     // setup for noise octaves
     let octaves = 5;
     let frequency = 6;
-    let amplitude = worldSystem.MAX_ELEVATION;
-    let elNoise = worldSystem.getNoise('elevation');
+    let amplitude = WorldModule.MAX_ELEVATION;
+    let elNoise = WorldModule.getNoise('elevation');
     for (let x = 0; x < world.width; x++) {
         for (let y = 0; y < world.height; y++) {
             if (!world.map[x][y].land) {
@@ -95,7 +95,7 @@ export function generateTemperature (world: World) {
     // general areas of temperature gradient
     const worldRadius = world.width / 2;
     const worldMedianRadius = worldRadius / 2;
-    const worldMaxElevation = worldSystem.MAX_ELEVATION;
+    const worldMaxElevation = WorldModule.MAX_ELEVATION;
     const worldMedianElevation = worldMaxElevation / 2;
     const worldCenterX = world.width / 2;
     const worldCenterY = world.height / 2;
@@ -104,7 +104,7 @@ export function generateTemperature (world: World) {
 
     // setup octave noise for temperature gradient octaves
     const octaves = 5;
-    let temperatureNoise = worldSystem.getNoise('temperature');
+    let temperatureNoise = WorldModule.getNoise('temperature');
     for (let x = 0; x < world.width; x++) {
         for (let y = 0; y < world.height; y++) {
             if (!world.map[x][y].land) {
@@ -149,10 +149,10 @@ export function generateTemperature (world: World) {
                 variance *= 1 - scale;
             }
 
-            let temp = variance * worldSystem.MAX_ELEVATION;
+            let temp = variance * WorldModule.MAX_ELEVATION;
 
             // cap temperatures at max and min
-            if (temp > worldSystem.MAX_ELEVATION) temp = 256;
+            if (temp > WorldModule.MAX_ELEVATION) temp = 256;
             if (temp < 0) temp = 0;
 
             world.map[x][y].temperature = temp;
@@ -164,7 +164,7 @@ export function generatePrecipitation (world: World) {
     let octaves = 5;
     let frequency = 4;
     let amplitude = 256;
-    let hydroNoise = worldSystem.getNoise('hydrology');
+    let hydroNoise = WorldModule.getNoise('hydrology');
     for (let x = 0; x < world.width; x++) {
         for (let y = 0; y < world.height; y++) {
             if (!world.map[x][y].land) continue;

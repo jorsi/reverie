@@ -1,16 +1,61 @@
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+
 module.exports = {
-    devtool: 'inline-source-map',
-    entry: './src/client/js/client.ts',
+    entry: {
+        main: './src/client'
+    },
+    mode: 'development',
+    target: 'web',
+    devtool: 'source-map',
+    devServer: {
+        proxy: {
+            '/socket': {
+                target: 'ws://localhost:3000',
+                ws: true,
+            },
+        },
+    },
+    plugins: [
+        new CleanWebpackPlugin(['dist/client']),
+        new HtmlWebpackPlugin({
+            title: 'Reverie'
+        })
+    ],
     output: {
-        path: __dirname + '/dist/client/js',
-        filename: 'client.js'
+        path: path.resolve(__dirname, 'dist/client'),
+        filename: '[name]-client.js'
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js']
+        modules: [
+            "node_modules",
+            path.resolve(__dirname, "dist"),
+        ],
+        extensions: ['.ts', '.js', '.json', '.css']
     },
     module: {
         rules: [
-            { test: /\.tsx?$/, loader: 'ts-loader', options: { configFile: 'tsconfig.client.json' } }
+            {
+                test: /\.css$/,
+                use: [
+                    'style-loader',
+                    'css-loader'
+                ]
+            },
+            {
+                test: /\.(png|svg|jpg|gif)$/,
+                use: [
+                    'file-loader'
+                ]
+            },
+            {
+                test: /\.tsx?$/,
+                loader: 'ts-loader',
+                options: {
+                    configFile: 'src/client/tsconfig.json'
+                }
+            }
         ]
     }
 }

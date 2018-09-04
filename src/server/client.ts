@@ -1,10 +1,9 @@
 /** Services */
-import * as network from './services/network';
-import * as events from './services/events';
+import * as network from './modules/networkModule';
+import * as events from './modules/eventsModule';
 
 /** Modules */
-import * as reverie from './reverie';
-import * as world from './worldSystem';
+import * as WorldModule from './modules/worldModule';
 
 import Entity from '../common/models/entity';
 
@@ -23,6 +22,7 @@ export default class Client {
         inWorld: false as boolean,
     };
     isInWorld: boolean = false;
+
     constructor (socket: SocketIO.Socket) {
         this.socket = socket;
 
@@ -31,6 +31,7 @@ export default class Client {
         socket.on('client/interact', (p: InteractPacket) => this.onInteract(p));
         socket.on('client/focus', (p: FocusPacket) => this.onFocus(p));
     }
+
     send (packet: Packet) {
         this.socket.emit(packet.event, packet);
     }
@@ -40,9 +41,9 @@ export default class Client {
         console.log(p);
         if (p.message.length === 0) return;
         if (p.message.charAt(0) !== '/' && this.entity) {
-            world.onEntityMessage(this.entity, p.message);
+            WorldModule.onEntityMessage(this.entity, p.message);
         } else {
-            reverie.onClientMessage(this, p.message);
+            events.emit('client/message', this, p.message);
         }
     }
     /**

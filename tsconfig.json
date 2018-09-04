@@ -1,16 +1,5 @@
 {
-  "compilerOptions": {
-    "sourceMap": true,
-    "strict": true,
-    "experimentalDecorators": true,
-    "noImplicitAny": true,
-    "strictPropertyInitialization": false,
-    "outDir": "dist"
-  },
-  "include": [
-    "src/common/**/*"
-  ],
-  "exclude": [
-    "node_modules"
+  "references": [
+    { "path": "../common" }
   ]
 }

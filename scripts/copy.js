@@ -13,7 +13,7 @@ function copyFileSync( source, target ) {
 
     fs.writeFileSync(targetFile, fs.readFileSync(source));
 }
-    
+
 function copyFolderRecursiveSync( source, target ) {
     var files = [];
 
@@ -36,6 +36,4 @@ function copyFolderRecursiveSync( source, target ) {
         } );
     }
 }
-copyFolderRecursiveSync('./src/client/css', './dist/client');
-copyFolderRecursiveSync('./src/client/res', './dist/client');
-copyFileSync('./src/client/index.html', './dist/client');
+copyFileSync('./src/public/index.html', './dist/client');

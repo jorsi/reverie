@@ -1,117 +1,59 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as network from './modules/networkModule';
+import * as events from './modules/eventsModule';
 
-/** Services */
-import * as network from './services/network';
-import * as events from './services/events';
-import * as terminal from './services/terminal';
+import * as WorldModule from './modules/worldModule';
 
-/** Modules */
-import * as worldSystem from './worldSystem';
-import * as timers from '../common/utils/timerManager';
-
-/** Data */
 import Client from './client';
 import WorldDataPacket from '../common/data/net/server/worldData';
 import WorldDestroyPacket from '../common/data/net/server/worldDestroy';
 import MessagePacket from '../common/data/net/server/serverMessage';
 import ClientEntityPacket from '../common/data/net/server/clientEntity';
+import { Dictionary } from '../common/types';
 
-
-export const version = {
-    major: 0,
-    minor: 0,
-    patch: 21
-};
-
-// root = ~/server/
-console.log('dir', __dirname);
+export interface ReverieConfiguration {}
 export const __rootdir = __dirname;
+export const clients: Dictionary<Client> = {};
 
-// Main systems
-export function getWorld () {
-    return worldSystem.get();
-}
-
-/**
- * Begins running the Reverie application loop.
- */
-export function run() {
-    isRunning = true;
-    update();
-}
-/**
- * Exiting process for application.
- */
+/** ends the program */
 export function exit() {
     process.exit();
 }
-/**
- * Dictionary of all connected clients.
- */
-let clients: Dictionary<Client> = {};
-export function getClients () { return clients; }
-/**
- * Returns a client with given socket id if
- * they are currently connected.
- * @param socketId Socket Id
- */
-export function getClient (socketId: string) {
-    return clients[socketId];
-}
 
-// Timer-based properties
-let isRunning = false;
-let tps = 60;
-let timePerTick = 1000 / tps;
-let serverTicks = 0;
-let accumulator = 0;
-let deltas: number[] = [];
-let startTime: Date = new Date();
-let lastUpdate = startTime.getTime();
-let reverieLoop: NodeJS.Timer;
 
-function getAverageTickTime() {
-    let avg = 0;
-    for (let d of deltas) {
-        avg += d;
-    }
-    avg = avg / deltas.length;
-    if (deltas.length > 10) deltas.pop();
-    return avg;
-}
-
-/**
- * Initialization constructor for application.
- * @param config Optional configuration object for Reverie application.
- */
-
+/** network setup */
 function onNetworkConnection (socket: SocketIO.Socket) {
     console.log(`reverie connection: ${socket.id}`);
     // add to client dictionary
     const client = clients[socket.id] = new Client(socket);
 
     // send world and entity if exists
-    let world = worldSystem.get();
-    if (world) {
-        client.send(new WorldDataPacket(world));
-        let entity = worldSystem.createEntity(client.socket.handshake.address);
-        client.send(new ClientEntityPacket(entity.serial));
-    }
-
-
+    // let w = WorldModule.get();
+    // if (w) {
+    //     client.send(new WorldDataPacket(w));
+    //     let entity = WorldModule.createEntity(client.socket.handshake.address);
+    //     client.send(new ClientEntityPacket(entity.serial));
+    // }
 }
+
 function onNetworkDisconnect (...args: any[]) {
     console.log(...args);
 }
-export function onClientMessage (client: Client, message: string) {
+
+function onTerminalCommand (data: any) {
+    // const entity = this.world.onNewClient();
+    // this.socketEntities[entity.serial] = packet.socket.id;
+    // packet.socket.send('world/playerEntity', new ServerPackets.PlayerEntity(entity));
+}
+
+/** client setup */
+function onClientMessage (client: Client, message: string) {
     const words = message.split(' ');
     if (words.length === 0) return;
     const command = words.shift();
 
     switch (command) {
         case '/create':
-            if (!worldSystem.worldCreated) {
+            if (!WorldModule.worldCreated) {
                 if (words.length >= 3) {
                     const seed = words.shift();
                     if (!seed) return;
@@ -122,18 +64,18 @@ export function onClientMessage (client: Client, message: string) {
                     if (!height || isNaN(parseInt(height))) return;
                     let h = parseInt(height);
 
-                    let model = worldSystem.create(seed, w, h);
+                    let model = WorldModule.create(seed, w, h);
                     client.send(new MessagePacket('You are filled with imagination.'));
 
                     // create entities for all connected clients
                     for (let serial in clients) {
                         let c = clients[serial];
-                        let entity = worldSystem.createEntity(c.socket.handshake.address);
+                        let entity = WorldModule.createEntity(c.socket.handshake.address);
                         c.send(new ClientEntityPacket(entity.serial));
                     }
 
                     // broadcast new world to all clients
-                    network.broadcast(new WorldDataPacket(model));
+                    // events.emit('reverie/create', new WorldDataPacket(model));
                 } else {
                     client.send(new MessagePacket('You can\'t seem to picture anything.'));
                 }
@@ -142,12 +84,12 @@ export function onClientMessage (client: Client, message: string) {
             }
         break;
         case '/destroy':
-            if (worldSystem.worldCreated) {
-                worldSystem.destroy();
+            if (WorldModule.worldCreated) {
+                WorldModule.destroy();
                 client.send(new MessagePacket('Your mind has become blank.'));
 
                 // broadcast destroy world to all clients
-                network.broadcast(new WorldDestroyPacket());
+                events.emit('reverie/destroy', new WorldDestroyPacket());
             } else {
                 client.send(new MessagePacket('You seem perplexed.'));
             }
@@ -162,68 +104,9 @@ export function onClientMessage (client: Client, message: string) {
             break;
     }
 }
-function onTerminalCommand (data: any) {
-    // const entity = this.world.onNewClient();
-    // this.socketEntities[entity.serial] = packet.socket.id;
-    // packet.socket.send('world/playerEntity', new ServerPackets.PlayerEntity(entity));
-}
 
-/**
- * Main Reverie application logic loop
- */
-function update() {
-    // update times
-    serverTicks++;
-    const now = new Date().getTime();
-    const delta = now - lastUpdate;
-    lastUpdate = now;
-
-    // process server timers
-    timers.process(delta);
-
-    // process event queue
-    events.process();
-
-    // update modules
-    accumulator += delta;
-    while (accumulator >= timePerTick) {
-        worldSystem.update(timePerTick);
-        accumulator -= timePerTick;
-    }
-
-    // asynchronous loop
-    if (isRunning) {
-        reverieLoop = setTimeout(() => update(), timePerTick);
-    } else {
-        // this.exit();
-    }
-}
-
-/**
- * Initialization of Reverie
- */
-
-console.log(`
-=====================================================================
-ooooooooo.                                             o8o
-888    Y88.                                            "
-888   .d88'  .ooooo.  oooo    ooo  .ooooo.  oooo d8b oooo   .ooooo.
-888ooo88P'  d88'  88b   88.  .8'  d88'  88b  888""8P  888  d88'  88b
-888 88b.    888ooo888    88..8'   888ooo888  888      888  888ooo888
-888   88b.  888    .o     888'    888    .o  888      888  888    .o
-o888o  o888o  Y8bod8P'      8'      Y8bod8P' d888b    o888o  Y8bod8P'
-=====================================================================
-(v${version.major}.${version.minor}.${version.patch})`);
-    console.log('\n');
-
-// Load all the scripts in the scripts folder
-// console.log('loading command scripts...');
-// const scripts = ScriptLoader.load(this.rootDirectory + '/scripts');
-// console.log('...finished loading scripts');
-
-// network events
-network.on('connection', (socket: SocketIO.Socket) => onNetworkConnection(socket));
-network.on('disconnect', (data: any) => onNetworkDisconnect(data));
-
-// internal events
+/** register events */
+events.on('network/connection', (socket: SocketIO.Socket) => onNetworkConnection(socket));
+events.on('network/disconnect', (data: any) => onNetworkDisconnect(data));
 events.on('terminal/command', (data) => onTerminalCommand(data));
+
