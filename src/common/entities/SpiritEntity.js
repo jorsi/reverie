@@ -1,5 +1,5 @@
-const Entity = require('../../common/entities/Entity');
-const Component = require('../../common/components/Component');
+const Entity = require('../../common/entities/entity');
+const Component = require('../../common/components/component');
 
 /*
  *  Spirit Entity

@@ -1,4 +1,4 @@
-const Component = require('../../common/components/Component');
+const Component = require('../../common/components/component');
 Component.register('move', {
     path: [],
     pos: [],
